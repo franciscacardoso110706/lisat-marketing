@@ -1,0 +1,35 @@
+# Dependências
+node_modules
+.pnp
+.pnp.js
+
+# Build
+dist
+dist-ssr
+*.local
+
+# Artefactos do TypeScript (gerados por "tsc -b")
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Ambiente (segredos — nunca versionar)
+.env
+.env.local
+.env.*.local
+
+# Editor / SO
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
