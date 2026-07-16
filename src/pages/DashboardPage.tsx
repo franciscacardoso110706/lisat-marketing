@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/Icon'
 import { StatCard } from '@/features/dashboard/StatCard'
 import { fetchTasks } from '@/features/tasks/api'
 import { fetchSponsors } from '@/features/sponsors/api'
-import { countPendingSubmissions } from '@/features/submissions/api'
+import { countPendingAttachments } from '@/features/attachments/api'
 import { daysUntil } from '@/lib/dates'
 import { pt } from '@/i18n/pt'
 
@@ -64,8 +64,8 @@ function LeaderStats() {
   const tasksQuery = useQuery({ queryKey: ['tasks'], queryFn: fetchTasks })
   const sponsorsQuery = useQuery({ queryKey: ['sponsors'], queryFn: fetchSponsors })
   const pendingQuery = useQuery({
-    queryKey: ['submissions', 'pending-count'],
-    queryFn: countPendingSubmissions,
+    queryKey: ['attachments', 'pending-count'],
+    queryFn: countPendingAttachments,
   })
 
   const overdue = (tasksQuery.data ?? []).filter(

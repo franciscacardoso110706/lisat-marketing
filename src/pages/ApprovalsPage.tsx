@@ -1,143 +1,117 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@/context/AuthContext'
-import { fetchSubmissions } from '@/features/submissions/api'
-import { fetchAreas, fetchMembers } from '@/features/members/api'
-import { fetchTasks } from '@/features/tasks/api'
-import { ReviewModal } from '@/features/submissions/ReviewModal'
-import { StatusBadge, TypeBadge } from '@/features/submissions/badges'
+import { useMemo } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  approveAttachment,
+  fetchPendingAttachments,
+  rejectAttachment,
+  type PendingAttachment,
+} from '@/features/attachments/api'
+import { AttachmentThumb } from '@/features/attachments/AttachmentThumb'
+import { fetchMembers } from '@/features/members/api'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { Icon } from '@/components/ui/Icon'
 import { formatDateTime } from '@/lib/dates'
 import { pt } from '@/i18n/pt'
-import type { Member, Submission } from '@/types/database'
+import type { Member } from '@/types/database'
 
 export function ApprovalsPage() {
-  const { member } = useAuth()
-  const [tab, setTab] = useState<'pending' | 'history'>('pending')
-  const [review, setReview] = useState<Submission | null>(null)
+  const qc = useQueryClient()
 
-  const subsQuery = useQuery({ queryKey: ['submissions'], queryFn: () => fetchSubmissions() })
+  const pendingQuery = useQuery({
+    queryKey: ['attachments', 'pending'],
+    queryFn: fetchPendingAttachments,
+  })
   const membersQuery = useQuery({ queryKey: ['members'], queryFn: fetchMembers })
-  const areasQuery = useQuery({ queryKey: ['areas'], queryFn: fetchAreas })
-  const tasksQuery = useQuery({ queryKey: ['tasks'], queryFn: fetchTasks })
+  const membersById = useMemo(
+    () => new Map((membersQuery.data ?? []).map((m) => [m.id, m])),
+    [membersQuery.data],
+  )
 
-  const members = membersQuery.data ?? []
-  const membersById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['attachments'] })
+    qc.invalidateQueries({ queryKey: ['tasks'] })
+  }
 
-  const pending = (subsQuery.data ?? []).filter((s) => s.status === 'pending')
-  const history = (subsQuery.data ?? []).filter((s) => s.status !== 'pending')
-  const list = tab === 'pending' ? pending : history
+  const approveMut = useMutation({
+    mutationFn: ({ id, taskId }: { id: string; taskId: string }) =>
+      approveAttachment(id, taskId),
+    onSuccess: invalidate,
+  })
+  const rejectMut = useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) => rejectAttachment(id, note),
+    onSuccess: invalidate,
+  })
+
+  const list = pendingQuery.data ?? []
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-slate-800">{pt.approvals.title}</h1>
-      <p className="mt-1 text-sm text-slate-500">{pt.approvals.subtitle}</p>
+      <h1 className="text-2xl font-bold text-slate-800">{pt.approvalsFiles.title}</h1>
 
-      {/* Separadores */}
-      <div className="mt-5 inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
-        <TabButton active={tab === 'pending'} onClick={() => setTab('pending')}>
-          {pt.approvals.pending}
-          {pending.length > 0 && (
-            <span className="ml-2 rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">
-              {pending.length}
-            </span>
-          )}
-        </TabButton>
-        <TabButton active={tab === 'history'} onClick={() => setTab('history')}>
-          {pt.approvals.history}
-        </TabButton>
-      </div>
-
-      <div className="mt-5 space-y-2">
-        {subsQuery.isLoading && <Spinner />}
-        {!subsQuery.isLoading && list.length === 0 && (
+      <div className="mt-6 space-y-3">
+        {pendingQuery.isLoading && <Spinner />}
+        {!pendingQuery.isLoading && list.length === 0 && (
           <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-            {tab === 'pending' ? pt.approvals.emptyPending : pt.approvals.emptyHistory}
+            {pt.approvalsFiles.empty}
           </p>
         )}
-        {list.map((s) => (
-          <SubmissionRow
-            key={s.id}
-            submission={s}
-            submitter={s.submitted_by ? membersById.get(s.submitted_by) : undefined}
-            onReview={() => setReview(s)}
+        {list.map((att) => (
+          <ReviewRow
+            key={att.id}
+            att={att}
+            uploader={att.uploaded_by ? membersById.get(att.uploaded_by) : undefined}
+            onApprove={() => approveMut.mutate({ id: att.id, taskId: att.task_id })}
+            onReject={() => {
+              const note = window.prompt(pt.deliverables.rejectPrompt) ?? ''
+              rejectMut.mutate({ id: att.id, note })
+            }}
+            busy={approveMut.isPending || rejectMut.isPending}
           />
         ))}
       </div>
-
-      <ReviewModal
-        submission={review}
-        open={!!review}
-        onClose={() => setReview(null)}
-        members={members}
-        areas={areasQuery.data ?? []}
-        tasks={tasksQuery.data ?? []}
-        currentMemberId={member?.id ?? null}
-      />
     </div>
   )
 }
 
-function TabButton({
-  active,
-  onClick,
-  children,
+function ReviewRow({
+  att,
+  uploader,
+  onApprove,
+  onReject,
+  busy,
 }: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
+  att: PendingAttachment
+  uploader?: Member
+  onApprove: () => void
+  onReject: () => void
+  busy: boolean
 }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center rounded-md px-3 py-1.5 text-sm font-medium transition ${
-        active ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function SubmissionRow({
-  submission,
-  submitter,
-  onReview,
-}: {
-  submission: Submission
-  submitter?: Member
-  onReview: () => void
-}) {
-  const isPending = submission.status === 'pending'
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-slate-800">{submission.title}</span>
-        <TypeBadge type={submission.type} />
-        {!isPending && <StatusBadge status={submission.status} />}
-        <span className="ml-auto text-xs text-slate-400">
-          {formatDateTime(submission.created_at)}
-        </span>
-      </div>
-      <div className="mt-1 text-sm text-slate-500">
-        {pt.approvals.from} <span className="font-medium text-slate-600">{submitter?.name ?? '—'}</span>
-      </div>
-      {submission.description && (
-        <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
-          {submission.description}
-        </p>
-      )}
-      {submission.status === 'rejected' && submission.leader_note && (
-        <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {submission.leader_note}
-        </p>
-      )}
-      {isPending && (
-        <div className="mt-3 flex justify-end">
-          <Button onClick={onReview}>{pt.approvals.accept} / {pt.approvals.reject}</Button>
+      <div className="flex gap-3">
+        <AttachmentThumb att={att} size={72} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-slate-800">{att.file_name}</div>
+          <div className="mt-0.5 text-sm text-slate-500">
+            {pt.approvalsFiles.task}:{' '}
+            <span className="font-medium text-slate-600">{att.task?.title ?? '—'}</span>
+          </div>
+          <div className="text-xs text-slate-400">
+            {pt.approvalsFiles.from} {uploader?.name ?? '—'} · {formatDateTime(att.created_at)}
+          </div>
         </div>
-      )}
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <Button variant="secondary" onClick={onReject} disabled={busy}>
+          <Icon name="close" size={16} />
+          {pt.deliverables.reject}
+        </Button>
+        <Button onClick={onApprove} disabled={busy}>
+          <Icon name="check" size={16} />
+          {pt.deliverables.approve}
+        </Button>
+      </div>
     </div>
   )
 }

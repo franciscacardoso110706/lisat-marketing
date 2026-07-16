@@ -8,7 +8,6 @@ import { TeamPage } from '@/pages/TeamPage'
 import { TasksPage } from '@/pages/TasksPage'
 import { MyTasksPage } from '@/pages/MyTasksPage'
 import { ApprovalsPage } from '@/pages/ApprovalsPage'
-import { SubmitPage } from '@/pages/SubmitPage'
 import { CalendarPage } from '@/pages/CalendarPage'
 import { LinksPage } from '@/pages/LinksPage'
 import { SponsorsPage } from '@/pages/SponsorsPage'
@@ -56,14 +55,6 @@ export default function App() {
           element={
             <RoleGate roles={['member']}>
               <MyTasksPage />
-            </RoleGate>
-          }
-        />
-        <Route
-          path="submeter"
-          element={
-            <RoleGate roles={['member']}>
-              <SubmitPage />
             </RoleGate>
           }
         />

@@ -30,18 +30,18 @@ export default {
           700: '#1e2b49', // bordas / hover
           600: '#293a5c',
         },
-        // Acento (azul elétrico com toque espacial)
+        // Azul da marca LISAT (do logo: #3a76d9)
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#eef4fc',
+          100: '#d9e6f9',
+          200: '#b9d0f3',
+          300: '#8fb2ea',
+          400: '#6193e1',
+          500: '#3a76d9',
+          600: '#2c62c4',
+          700: '#264fa0',
+          800: '#234584',
+          900: '#21396b',
         },
         // Realce ciano para detalhes "tech"
         glow: {

@@ -19,7 +19,6 @@ export const navItems: NavItem[] = [
   { to: '/tarefas', label: pt.nav.tasks, icon: 'tasks', show: isLeader },
   { to: '/minhas-tarefas', label: pt.nav.myTasks, icon: 'my-tasks', show: isMember },
   { to: '/aprovacoes', label: pt.nav.approvals, icon: 'approvals', show: isLeader },
-  { to: '/submeter', label: pt.nav.submit, icon: 'submit', show: isMember },
   { to: '/calendario', label: pt.nav.calendar, icon: 'calendar', show: () => true },
   { to: '/links', label: pt.nav.links, icon: 'links', show: () => true },
   {

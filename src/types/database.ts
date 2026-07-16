@@ -6,6 +6,8 @@ export type Role = 'leader' | 'member'
 
 export type TaskStatus = 'todo' | 'doing' | 'done'
 
+export type AttachmentStatus = 'pending' | 'approved' | 'rejected'
+
 export type SubmissionType = 'ideia' | 'pedido' | 'impedimento' | 'outro'
 export type SubmissionStatus = 'pending' | 'accepted' | 'rejected'
 
@@ -66,6 +68,21 @@ export interface TaskComment {
   author_id: string | null
   body: string
   created_at: string
+}
+
+export interface TaskAttachment {
+  id: string
+  space_id: string
+  task_id: string
+  uploaded_by: string | null
+  file_path: string
+  file_name: string
+  mime_type: string | null
+  size_bytes: number | null
+  status: AttachmentStatus
+  leader_note: string | null
+  created_at: string
+  reviewed_at: string | null
 }
 
 export interface Submission {

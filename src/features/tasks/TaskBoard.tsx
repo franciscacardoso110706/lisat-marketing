@@ -25,6 +25,7 @@ export function TaskBoard({
   areas,
   members,
   showAssignee = true,
+  readOnly = false,
   onCardClick,
   onStatusChange,
 }: {
@@ -32,15 +33,15 @@ export function TaskBoard({
   areas: Area[]
   members: Member[]
   showAssignee?: boolean
+  /** Só-leitura: sem arrastar (o membro não muda o estado). */
+  readOnly?: boolean
   onCardClick: (task: Task) => void
-  onStatusChange: (taskId: string, status: TaskStatus) => void
+  onStatusChange?: (taskId: string, status: TaskStatus) => void
 }) {
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const sensors = useSensors(
-    // Distância mínima antes de iniciar o arrasto → o clique/tap continua a funcionar.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    // No telemóvel: pressão longa inicia o arrasto (deixa o scroll normal funcionar).
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
   )
 
@@ -58,6 +59,25 @@ export function TaskBoard({
 
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null
 
+  const board = (
+    <div className="grid gap-4 md:grid-cols-3">
+      {COLUMNS.map((col) => (
+        <Column
+          key={col.status}
+          status={col.status}
+          label={col.label}
+          accent={col.accent}
+          items={byStatus(col.status)}
+          showAssignee={showAssignee}
+          readOnly={readOnly}
+          onCardClick={onCardClick}
+        />
+      ))}
+    </div>
+  )
+
+  if (readOnly) return board
+
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id))
   }
@@ -68,7 +88,7 @@ export function TaskBoard({
     const overStatus = e.over?.id as TaskStatus | undefined
     if (!overStatus) return
     const task = tasks.find((t) => t.id === taskId)
-    if (task && task.status !== overStatus) onStatusChange(taskId, overStatus)
+    if (task && task.status !== overStatus) onStatusChange?.(taskId, overStatus)
   }
 
   return (
@@ -78,20 +98,7 @@ export function TaskBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="grid gap-4 md:grid-cols-3">
-        {COLUMNS.map((col) => (
-          <Column
-            key={col.status}
-            status={col.status}
-            label={col.label}
-            accent={col.accent}
-            items={byStatus(col.status)}
-            showAssignee={showAssignee}
-            onCardClick={onCardClick}
-          />
-        ))}
-      </div>
-
+      {board}
       <DragOverlay dropAnimation={null}>
         {activeTask ? (
           <TaskCardContent data={resolve(activeTask)} showAssignee={showAssignee} dragging />
@@ -107,6 +114,7 @@ function Column({
   accent,
   items,
   showAssignee,
+  readOnly,
   onCardClick,
 }: {
   status: TaskStatus
@@ -114,9 +122,10 @@ function Column({
   accent: string
   items: ResolvedTask[]
   showAssignee: boolean
+  readOnly: boolean
   onCardClick: (task: Task) => void
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: status })
+  const { setNodeRef, isOver } = useDroppable({ id: status, disabled: readOnly })
   return (
     <div
       ref={setNodeRef}
@@ -134,6 +143,16 @@ function Column({
       <div className="flex flex-col gap-2.5">
         {items.length === 0 ? (
           <p className="px-1 py-6 text-center text-xs text-slate-400">{pt.tasks.empty}</p>
+        ) : readOnly ? (
+          items.map((item) => (
+            <button
+              key={item.task.id}
+              onClick={() => onCardClick(item.task)}
+              className="w-full text-left"
+            >
+              <TaskCardContent data={item} showAssignee={showAssignee} />
+            </button>
+          ))
         ) : (
           items.map((item) => (
             <TaskCard

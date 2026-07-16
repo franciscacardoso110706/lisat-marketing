@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { FullPageSpinner } from '@/components/ui/Spinner'
-import { Icon } from '@/components/ui/Icon'
 import { pt } from '@/i18n/pt'
 
 export function LoginPage() {
@@ -18,9 +17,7 @@ export function LoginPage() {
     <div className="app-bg flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-pop">
         <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white shadow-glow">
-            <Icon name="satellite" size={28} />
-          </span>
+          <img src="/logo.svg" alt="LISAT" className="mb-3 h-20 w-20 object-contain" />
           <div className="text-xl font-extrabold tracking-tight text-slate-800">
             LISAT · Marketing
           </div>

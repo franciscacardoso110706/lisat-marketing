@@ -51,6 +51,14 @@ create table if not exists public.areas (
   name      text not null,
   color     text not null default '#64748b'
 );
+-- Remove áreas duplicadas antigas antes de impor a unicidade (mantém uma de cada).
+delete from public.areas a using public.areas b
+  where a.ctid < b.ctid
+    and a.space_id = b.space_id
+    and lower(a.name) = lower(b.name);
+-- Evita áreas duplicadas (mesma área no mesmo espaço).
+create unique index if not exists areas_space_name_unique
+  on public.areas (space_id, lower(name));
 
 create table if not exists public.tasks (
   id           uuid primary key default gen_random_uuid(),
@@ -269,8 +277,8 @@ create policy areas_write on public.areas for all to authenticated
   using (public.is_leader() and space_id = public.current_space_id())
   with check (public.is_leader() and space_id = public.current_space_id());
 
--- TASKS: líder vê tudo; membro vê só as suas. Membro pode atualizar as suas
--- (mudar estado); criar/apagar só o líder.
+-- TASKS: líder vê tudo; membro vê só as suas. Criar/atualizar (mudar estado)/
+-- apagar é SÓ do líder — o membro nunca altera o estado da tarefa.
 drop policy if exists tasks_select on public.tasks;
 create policy tasks_select on public.tasks for select to authenticated
   using (
@@ -282,11 +290,8 @@ create policy tasks_insert on public.tasks for insert to authenticated
   with check (public.is_leader() and space_id = public.current_space_id());
 drop policy if exists tasks_update on public.tasks;
 create policy tasks_update on public.tasks for update to authenticated
-  using (
-    space_id = public.current_space_id()
-    and (public.is_leader() or assignee_id = public.current_member_id())
-  )
-  with check (space_id = public.current_space_id());
+  using (public.is_leader() and space_id = public.current_space_id())
+  with check (public.is_leader() and space_id = public.current_space_id());
 drop policy if exists tasks_delete on public.tasks;
 create policy tasks_delete on public.tasks for delete to authenticated
   using (public.is_leader() and space_id = public.current_space_id());
@@ -365,6 +370,115 @@ create policy links_write on public.links for all to authenticated
   using (public.is_leader() and space_id = public.current_space_id())
   with check (public.is_leader() and space_id = public.current_space_id());
 
+-- ============================================================================
+--  ENTREGÁVEIS (ficheiros anexados às tarefas, com aprovação do líder)
+-- ============================================================================
+
+create table if not exists public.task_attachments (
+  id           uuid primary key default gen_random_uuid(),
+  space_id     uuid not null default '00000000-0000-0000-0000-000000000001'
+                 references public.spaces(id) on delete cascade,
+  task_id      uuid not null references public.tasks(id) on delete cascade,
+  uploaded_by  uuid references public.members(id) on delete set null,
+  file_path    text not null,             -- caminho no bucket: {task_id}/{uuid}.{ext}
+  file_name    text not null,             -- nome original do ficheiro
+  mime_type    text,
+  size_bytes   integer,
+  status       text not null default 'pending'
+                 check (status in ('pending','approved','rejected')),
+  leader_note  text,
+  created_at   timestamptz not null default now(),
+  reviewed_at  timestamptz
+);
+
+alter table public.task_attachments enable row level security;
+
+-- Mesma visibilidade da tarefa: líder vê tudo; membro só as suas.
+drop policy if exists attachments_select on public.task_attachments;
+create policy attachments_select on public.task_attachments for select to authenticated
+  using (
+    space_id = public.current_space_id()
+    and (
+      public.is_leader()
+      or exists (
+        select 1 from public.tasks t
+        where t.id = task_id and t.assignee_id = public.current_member_id()
+      )
+    )
+  );
+
+-- O membro anexa nas suas tarefas; o líder em qualquer uma.
+drop policy if exists attachments_insert on public.task_attachments;
+create policy attachments_insert on public.task_attachments for insert to authenticated
+  with check (
+    space_id = public.current_space_id()
+    and uploaded_by = public.current_member_id()
+    and (
+      public.is_leader()
+      or exists (
+        select 1 from public.tasks t
+        where t.id = task_id and t.assignee_id = public.current_member_id()
+      )
+    )
+  );
+
+-- Só o líder aprova/rejeita.
+drop policy if exists attachments_update on public.task_attachments;
+create policy attachments_update on public.task_attachments for update to authenticated
+  using (public.is_leader() and space_id = public.current_space_id())
+  with check (public.is_leader() and space_id = public.current_space_id());
+
+-- Apagar: o líder, ou quem carregou o ficheiro.
+drop policy if exists attachments_delete on public.task_attachments;
+create policy attachments_delete on public.task_attachments for delete to authenticated
+  using (
+    space_id = public.current_space_id()
+    and (public.is_leader() or uploaded_by = public.current_member_id())
+  );
+
+-- Bucket de armazenamento (privado). O acesso aos ficheiros é por URL assinado.
+insert into storage.buckets (id, name, public)
+values ('task-files', 'task-files', false)
+on conflict (id) do nothing;
+
+-- Políticas de armazenamento: o caminho começa pelo id da tarefa ({task_id}/...),
+-- por isso restringimos por tarefa tal como na tabela.
+drop policy if exists task_files_select on storage.objects;
+create policy task_files_select on storage.objects for select to authenticated
+  using (
+    bucket_id = 'task-files'
+    and exists (
+      select 1 from public.tasks t
+      where t.id = ((storage.foldername(name))[1])::uuid
+        and t.space_id = public.current_space_id()
+        and (public.is_leader() or t.assignee_id = public.current_member_id())
+    )
+  );
+
+drop policy if exists task_files_insert on storage.objects;
+create policy task_files_insert on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'task-files'
+    and exists (
+      select 1 from public.tasks t
+      where t.id = ((storage.foldername(name))[1])::uuid
+        and t.space_id = public.current_space_id()
+        and (public.is_leader() or t.assignee_id = public.current_member_id())
+    )
+  );
+
+drop policy if exists task_files_delete on storage.objects;
+create policy task_files_delete on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'task-files'
+    and exists (
+      select 1 from public.tasks t
+      where t.id = ((storage.foldername(name))[1])::uuid
+        and t.space_id = public.current_space_id()
+        and (public.is_leader() or t.assignee_id = public.current_member_id())
+    )
+  );
+
 -- ----------------------------------------------------------------------------
 --  SEED
 -- ----------------------------------------------------------------------------
@@ -376,11 +490,13 @@ on conflict (id) do nothing;
 
 -- Áreas por omissão (com cores para os filtros e etiquetas)
 insert into public.areas (space_id, name, color) values
-  ('00000000-0000-0000-0000-000000000001', 'Social Media', '#e11d48'),
-  ('00000000-0000-0000-0000-000000000001', 'Sponsors',     '#f59e0b'),
-  ('00000000-0000-0000-0000-000000000001', 'Design',       '#8b5cf6'),
-  ('00000000-0000-0000-0000-000000000001', 'Vídeo',        '#0ea5e9'),
-  ('00000000-0000-0000-0000-000000000001', 'Website',      '#10b981')
+  ('00000000-0000-0000-0000-000000000001', 'Documentário',    '#0ea5e9'),
+  ('00000000-0000-0000-0000-000000000001', 'Website',         '#10b981'),
+  ('00000000-0000-0000-0000-000000000001', 'Posts Instagram', '#e1306c'),
+  ('00000000-0000-0000-0000-000000000001', 'Posts Linkedin',  '#0a66c2'),
+  ('00000000-0000-0000-0000-000000000001', 'Sponsors',        '#f59e0b'),
+  ('00000000-0000-0000-0000-000000000001', 'Merch',           '#8b5cf6'),
+  ('00000000-0000-0000-0000-000000000001', 'Apresentações',   '#14b8a6')
 on conflict do nothing;
 
 -- ============================================================================

@@ -51,8 +51,7 @@ export function TasksPage() {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">{pt.tasks.title}</h1>
-          <p className="mt-1 text-sm text-slate-400">{pt.tasks.subtitleLeader}</p>
+          <h1 className="text-2xl font-bold text-slate-800">{pt.tasks.title}</h1>
         </div>
         <Button
           onClick={() => {

@@ -36,7 +36,6 @@ export function TeamPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">{pt.team.title}</h1>
-          <p className="mt-1 text-sm text-slate-500">{pt.team.subtitle}</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
           <Icon name="plus" size={16} />

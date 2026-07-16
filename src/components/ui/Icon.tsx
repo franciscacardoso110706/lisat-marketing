@@ -25,6 +25,10 @@ export type IconName =
   | 'alert'
   | 'trending-up'
   | 'social'
+  | 'paperclip'
+  | 'file'
+  | 'image'
+  | 'download'
 
 const paths: Record<IconName, ReactNode> = {
   home: (
@@ -156,6 +160,29 @@ const paths: Record<IconName, ReactNode> = {
       <circle cx="18" cy="19" r="3" />
       <path d="m8.59 13.51 6.83 3.98" />
       <path d="m15.41 6.51-6.82 3.98" />
+    </>
+  ),
+  paperclip: (
+    <path d="M13.234 20.252 21 12.3a4.532 4.532 0 0 0-6.408-6.408L4.9 15.584a2.7 2.7 0 0 0 3.816 3.816l8.148-8.148a1 1 0 0 0-1.414-1.414l-7.44 7.44" />
+  ),
+  file: (
+    <>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    </>
+  ),
+  image: (
+    <>
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M12 15V3" />
     </>
   ),
   send: (
