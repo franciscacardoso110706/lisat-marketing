@@ -5,8 +5,9 @@ import type {
   TextareaHTMLAttributes,
 } from 'react'
 
+// text-base (16px) no telemóvel evita o zoom automático do iOS ao focar; sm:text-sm no desktop.
 export const controlCls =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 disabled:bg-slate-50'
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 disabled:bg-slate-50'
 
 export function Field({
   label,

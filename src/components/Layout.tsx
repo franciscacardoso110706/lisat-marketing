@@ -146,7 +146,7 @@ function MobileNav({
         }`}
       >
         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           {items.map((item) => {
             const badge = badgeFor(item.to)
             return (
@@ -156,7 +156,7 @@ function MobileNav({
                 end={item.to === '/'}
                 onClick={onClose}
                 className={({ isActive }) =>
-                  `relative flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition ${
+                  `relative flex w-[calc(50%-0.375rem)] flex-col items-center gap-2 rounded-2xl border p-3 text-center transition ${
                     isActive
                       ? 'border-brand-300 bg-brand-50 text-brand-700'
                       : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
