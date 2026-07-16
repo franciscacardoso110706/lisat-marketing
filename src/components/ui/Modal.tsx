@@ -20,9 +20,12 @@ export function Modal({
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
+    // Esconde a bola de navegação do telemóvel enquanto o modal está aberto.
+    document.body.classList.add('modal-open')
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      document.body.classList.remove('modal-open')
     }
   }, [open, onClose])
 

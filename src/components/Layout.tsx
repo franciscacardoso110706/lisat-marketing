@@ -186,7 +186,7 @@ function MobileNav({
         onClick={onToggle}
         aria-label="Menu"
         aria-expanded={open}
-        className="fixed bottom-5 left-1/2 z-50 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg ring-4 ring-white transition active:scale-95"
+        className="nav-ball fixed bottom-5 left-1/2 z-50 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg ring-4 ring-white transition active:scale-95"
       >
         <Icon name={open ? 'close' : 'home'} size={24} />
         {!open && hasPending && (

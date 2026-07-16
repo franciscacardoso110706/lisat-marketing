@@ -29,6 +29,12 @@ body {
   background-size: 24px 24px;
 }
 
+/* Esconde a bola de navegação do telemóvel quando há um modal aberto
+   (para não se sobrepor aos botões do modal). */
+body.modal-open .nav-ball {
+  display: none;
+}
+
 /* Barra lateral azul (marca LISAT) */
 .sidebar-bg {
   background-color: #2c62c4;
